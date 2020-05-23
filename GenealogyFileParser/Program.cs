@@ -9,6 +9,7 @@ using System.Configuration;
 using System.Reflection;
 using HtmlAgilityPack;
 using DocumentFormat.OpenXml.Wordprocessing;
+using DocumentFormat.OpenXml.Drawing.Charts;
 
 namespace GenealogyFileParser
 {
@@ -30,88 +31,88 @@ namespace GenealogyFileParser
                     var xmlString = wordDocument.MainDocumentPart.Document.Body.InnerXml;
                     var xml = XElement.Parse("<root>" + xmlString + "</root>");
 
-                    BuildTree(xml);
-
-
-
-
-                    //var check = xml.Elements().Select(t => t.Name).ToList();
-                    // Console.WriteLine(xml.ToString());
+                    var doc = BuildHtml(xml, "", 999);
+                    SaveHtml(doc);
                 }
             }
-
-
         }
 
-        static XElement BuildTree(XElement xml)
+        static HtmlDocument BuildHtml(XElement xml, string entryPoint = "", int depth = 999)
         {
-            XElement root = new XElement("root");
+            bool includeSiblings = true;
             var elements = xml.Elements().ToList();
+            if(entryPoint.Trim() != "")
+            {
+                var entryIndex = elements.FindIndex(e => e.Value.StartsWith(entryPoint));
+                elements = elements.Skip(entryIndex).ToList();
+                includeSiblings = false;
+            }
 
             HtmlDocument doc = new HtmlDocument();
-            var body = doc.CreateElement("body");
-            doc.DocumentNode.AppendChild(body);
 
-            var currentIlvl = -2;
-            var currentNode = body;
+            if(elements.Count == 0)
+            {
+                return doc;
+            }
 
-            for(int i = 0; i < elements.Count; i++)
+            var topIlvl = GetIlvl(elements[0]);
+            var currentIlvl = topIlvl;
+            var currentNode = doc.DocumentNode;
+
+            for (int i = 0; i < elements.Count; i++)
             {
                 var element = elements[i];
                 var ilvl = GetIlvl(element);
-                if(element.Value.Trim() == "")
+
+                bool emptyNode = element.Value.Trim() == "";
+                bool outOfScope = ilvl < topIlvl;
+                bool beyondDepth = ilvl > topIlvl + depth;
+
+                if (outOfScope) // if this node is above the top level, quit
+                {
+                    break;
+                }
+                if (emptyNode || beyondDepth) // skip empty nodes
                 {
                     continue;
                 }
 
+                var person = ilvl == topIlvl ? // don't add top lvl nodes to a list
+                    HtmlNode.CreateNode("<p>" + element.Value + "</p") :
+                    HtmlNode.CreateNode("<li>" + element.Value + "</li>");
+
                 if(ilvl > currentIlvl) // start a new list
                 {
                     var list = currentNode.AppendChild(HtmlNode.CreateNode("<ol></ol>"));
-                    list.AppendChild(HtmlNode.CreateNode("<li>" + element.Value + "</li>"));
+                    list.AppendChild(person);
                     currentIlvl = ilvl;
                     currentNode = list;
                 } else if(ilvl == currentIlvl) // append to this list
                 {
-                    currentNode.AppendChild(HtmlNode.CreateNode("<li>" + element.Value + "</li>"));
+                    currentNode.AppendChild(person);
                 } else // traverse the tree up to the correct level
                 {
                     for (; currentIlvl > ilvl; currentIlvl--)
                     {
                         currentNode = currentNode.ParentNode;
                     }
-                    currentNode.AppendChild(HtmlNode.CreateNode("<li>" + element.Value + "</li>"));
+                    if (currentIlvl == topIlvl && !includeSiblings)
+                    {
+                        break;
+                    }
+                    currentNode.AppendChild(person);
                 }
             }
 
-            //Console.WriteLine(body.InnerHtml);
+            return doc;
+        }
 
+        static void SaveHtml(HtmlDocument doc)
+        {
             using (StreamWriter writer = File.CreateText("test.html"))
             {
                 doc.Save(writer);
             }
-                
-
-            //foreach(XElement element in xml.Elements())
-            //{
-            //    //element.Attributes().Select(n => { Console.WriteLine(n.Name); return ""; }).ToList() ;
-
-            //    //Console.WriteLine(element.ToString());
-            //    var ilvl = GetIlvl(element);
-
-            //    for(int i = 0; i < ilvl; i++)
-            //    {
-            //        Console.Write("  ");
-            //    }
-            //    Console.WriteLine(element.Value.Substring(0, Math.Min(30, element.Value.Length)));
-            //    //break;
-            //}
-
-            foreach (XElement element in root.Elements())
-            {
-                //
-            }
-
-            return xml;
         }
 
         static int GetIlvl(XElement xml)
