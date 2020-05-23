@@ -1,12 +1,14 @@
-<Project Sdk="Microsoft.NET.Sdk">
+﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
     <OutputType>Exe</OutputType>
     <TargetFramework>netcoreapp3.1</TargetFramework>
+    <UserSecretsId>4596637a-e298-4685-bba2-2f8fa2583a40</UserSecretsId>
   </PropertyGroup>
 
   <ItemGroup>
     <PackageReference Include="DocumentFormat.OpenXml" Version="2.11.0" />
+    <PackageReference Include="System.Configuration.ConfigurationManager" Version="4.7.0" />
   </ItemGroup>
 
 </Project>

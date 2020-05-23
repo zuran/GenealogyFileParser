@@ -5,6 +5,8 @@ using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Xml.Linq;
+using System.Configuration;
+using System.Reflection;
 
 namespace GenealogyFileParser
 {
@@ -17,7 +19,7 @@ namespace GenealogyFileParser
 
         static void ReadDocument()
         {
-            string filepath = @"C:\Users\Stephen\Desktop\Family Files\Working\youngwiley16.docx";
+            string filepath = ConfigurationManager.AppSettings.Get("filename");
 
             using (Stream stream = new FileStream(filepath, FileMode.Open, FileAccess.Read, FileShare.ReadWrite))
             {
@@ -27,6 +29,9 @@ namespace GenealogyFileParser
                     var xml = XElement.Parse("<root>" + xmlString + "</root>");
 
                     BuildTree(xml);
+
+
+
 
                     //var check = xml.Elements().Select(t => t.Name).ToList();
                     // Console.WriteLine(xml.ToString());
