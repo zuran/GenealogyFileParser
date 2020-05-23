@@ -7,6 +7,8 @@ using System.Linq;
 using System.Xml.Linq;
 using System.Configuration;
 using System.Reflection;
+using HtmlAgilityPack;
+using DocumentFormat.OpenXml.Wordprocessing;
 
 namespace GenealogyFileParser
 {
@@ -46,29 +48,65 @@ namespace GenealogyFileParser
             XElement root = new XElement("root");
             var elements = xml.Elements().ToList();
 
+            HtmlDocument doc = new HtmlDocument();
+            var body = doc.CreateElement("body");
+            doc.DocumentNode.AppendChild(body);
+
+            var currentIlvl = -2;
+            var currentNode = body;
+
             for(int i = 0; i < elements.Count; i++)
             {
-                
-            }
-
-
-
-            foreach(XElement element in xml.Elements())
-            {
-                //element.Attributes().Select(n => { Console.WriteLine(n.Name); return ""; }).ToList() ;
-
-                //Console.WriteLine(element.ToString());
+                var element = elements[i];
                 var ilvl = GetIlvl(element);
-
-                for(int i = 0; i < ilvl; i++)
+                if(element.Value.Trim() == "")
                 {
-                    Console.Write("  ");
+                    continue;
                 }
-                Console.WriteLine(element.Value.Substring(0, Math.Min(30, element.Value.Length)));
-                //break;
+
+                if(ilvl > currentIlvl) // start a new list
+                {
+                    var list = currentNode.AppendChild(HtmlNode.CreateNode("<ol></ol>"));
+                    list.AppendChild(HtmlNode.CreateNode("<li>" + element.Value + "</li>"));
+                    currentIlvl = ilvl;
+                    currentNode = list;
+                } else if(ilvl == currentIlvl) // append to this list
+                {
+                    currentNode.AppendChild(HtmlNode.CreateNode("<li>" + element.Value + "</li>"));
+                } else // traverse the tree up to the correct level
+                {
+                    for (; currentIlvl > ilvl; currentIlvl--)
+                    {
+                        currentNode = currentNode.ParentNode;
+                    }
+                    currentNode.AppendChild(HtmlNode.CreateNode("<li>" + element.Value + "</li>"));
+                }
             }
 
-            foreach(XElement element in root.Elements())
+            //Console.WriteLine(body.InnerHtml);
+
+            using (StreamWriter writer = File.CreateText("test.html"))
+            {
+                doc.Save(writer);
+            }
+                
+
+            //foreach(XElement element in xml.Elements())
+            //{
+            //    //element.Attributes().Select(n => { Console.WriteLine(n.Name); return ""; }).ToList() ;
+
+            //    //Console.WriteLine(element.ToString());
+            //    var ilvl = GetIlvl(element);
+
+            //    for(int i = 0; i < ilvl; i++)
+            //    {
+            //        Console.Write("  ");
+            //    }
+            //    Console.WriteLine(element.Value.Substring(0, Math.Min(30, element.Value.Length)));
+            //    //break;
+            //}
+
+            foreach (XElement element in root.Elements())
             {
                 //
             }
